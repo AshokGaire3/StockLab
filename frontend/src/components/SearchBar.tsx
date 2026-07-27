@@ -78,26 +78,26 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSelectStock }) => {
   return (
     <div className="relative w-full max-w-md" ref={searchRef}>
       <div className="relative">
-        <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-3.5 h-3.5" />
         <input
           ref={inputRef}
           type="text"
           placeholder="Search tickers (AAPL, NVDA, TSLA...)"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="w-full pl-10 pr-16 py-2.5 bg-slate-900/90 border border-slate-800 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-medium"
+          className="w-full pl-9 pr-14 py-1.5 bg-slate-900/90 border border-slate-800 rounded-md text-white placeholder-slate-500 text-xs font-mono focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all"
         />
 
-        <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
+        <div className="absolute right-2.5 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
           {query ? (
             <button
               onClick={clearSearch}
-              className="text-slate-400 hover:text-white p-1 rounded-lg transition-colors"
+              className="text-slate-400 hover:text-white p-0.5 rounded transition-colors"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5" />
             </button>
           ) : (
-            <kbd className="hidden sm:inline-flex items-center gap-0.5 px-2 py-0.5 text-[10px] font-semibold text-slate-400 bg-slate-800 border border-slate-700 rounded-md">
+            <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[9px] font-mono font-semibold text-slate-400 bg-slate-800 border border-slate-700 rounded">
               <Command className="w-2.5 h-2.5" /> K
             </kbd>
           )}
@@ -106,36 +106,36 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSelectStock }) => {
 
       {/* Results Glass Dropdown */}
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-2 glass-modal rounded-2xl shadow-2xl z-50 max-h-96 overflow-y-auto border border-slate-800 animate-fadeIn">
+        <div className="absolute top-full left-0 right-0 mt-1.5 glass-modal rounded-lg shadow-2xl z-50 max-h-80 overflow-y-auto border border-slate-800 animate-fadeIn">
           {loading ? (
-            <div className="p-4 text-center text-slate-400 text-sm">
-              <div className="animate-pulse">Searching markets...</div>
+            <div className="p-3 text-center text-slate-400 font-mono text-xs">
+              <div className="animate-pulse">Querying proxy market directory...</div>
             </div>
           ) : results.length > 0 ? (
-            <div className="py-2 divide-y divide-slate-800/60">
+            <div className="py-1 divide-y divide-slate-800/60">
               {results.map((stock) => (
                 <button
                   key={stock.symbol}
                   onClick={() => handleSelectStock(stock.symbol)}
-                  className="w-full px-4 py-3 text-left hover:bg-slate-800/80 transition-colors flex justify-between items-center group"
+                  className="w-full px-3 py-2.5 text-left hover:bg-slate-800/80 transition-colors flex justify-between items-center group"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center justify-center font-bold text-xs group-hover:border-blue-500/40">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center justify-center font-bold font-mono text-xs group-hover:border-blue-500/40">
                       {stock.symbol.slice(0, 3)}
                     </div>
                     <div>
-                      <div className="text-white font-bold text-sm group-hover:text-blue-400 transition-colors">
+                      <div className="text-white font-bold text-xs tracking-tight group-hover:text-blue-400 transition-colors">
                         {stock.symbol}
                       </div>
-                      <div className="text-slate-400 text-xs truncate max-w-[180px]">{stock.name}</div>
+                      <div className="text-slate-400 text-[11px] truncate max-w-[160px]">{stock.name}</div>
                     </div>
                   </div>
 
-                  <div className="text-right">
-                    <div className="text-white font-mono text-sm font-semibold">${stock.price.toFixed(2)}</div>
+                  <div className="text-right font-mono tabular-nums">
+                    <div className="text-white text-xs font-bold">${stock.price.toFixed(2)}</div>
                     <div
-                      className={`text-xs font-semibold ${
-                        stock.changePercent >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                      className={`text-[10px] font-semibold ${
+                        stock.changePercent >= 0 ? 'text-emerald-400' : 'text-red-400'
                       }`}
                     >
                       {stock.changePercent >= 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%
@@ -145,7 +145,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSelectStock }) => {
               ))}
             </div>
           ) : query.length > 0 ? (
-            <div className="p-4 text-center text-slate-400 text-sm">
+            <div className="p-3 text-center text-slate-400 font-mono text-xs">
               No matching assets found for "<span className="text-white">{query}</span>"
             </div>
           ) : null}

@@ -4,66 +4,70 @@
 
 @layer base {
   body {
-    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-    background-color: #0B0F17;
-    color: #F3F4F6;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #090D14;
+    color: #E2E8F0;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
 
-  code, pre, .font-mono {
-    font-family: 'JetBrains Mono', monospace;
+  code, pre, .font-mono, .tabular-nums {
+    font-family: 'JetBrains Mono', 'Roboto Mono', monospace;
+    font-variant-numeric: tabular-nums;
   }
 }
 
-/* Smooth Animations & Clean Glass Panel System */
+/* Institutional Clean Card System */
 .glass-panel {
-  background: #111827;
-  border: 1px solid #1E293B;
-  border-radius: 0.75rem;
+  background: #111722;
+  border: 1px solid #1B2433;
+  border-radius: 0.5rem;
 }
 
 .glass-panel-hover {
-  background: #111827;
-  border: 1px solid #1E293B;
-  border-radius: 0.75rem;
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-              border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-              background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-              box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #111722;
+  border: 1px solid #1B2433;
+  border-radius: 0.5rem;
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
 }
 
 .glass-panel-hover:hover {
-  background: #151F30;
-  border-color: #334155;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.4);
+  background: #151E2C;
+  border-color: #2E3E56;
 }
 
 .glass-modal {
-  background: #111827;
-  border: 1px solid #334155;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
-  border-radius: 1rem;
+  background: #111722;
+  border: 1px solid #2B3A52;
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.85);
+  border-radius: 0.75rem;
 }
 
+/* Market Signal Badges */
 .pill-green {
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.25);
   color: #10B981;
 }
 
 .pill-red {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.25);
   color: #EF4444;
 }
 
-/* Smooth Fade In */
+.pill-neutral {
+  background: rgba(100, 116, 139, 0.12);
+  border: 1px solid rgba(100, 116, 139, 0.25);
+  color: #94A3B8;
+}
+
+/* Subtle Fade In */
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(4px);
+    transform: translateY(2px);
   }
   to {
     opacity: 1;
@@ -72,24 +76,25 @@
 }
 
 .animate-fadeIn {
-  animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: fadeIn 0.15s ease-out forwards;
 }
 
-/* Custom Scrollbars */
+/* High-Density Terminal Scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0B0F17;
+  background: #090D14;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1E293B;
-  border-radius: 3px;
+  background: #1B2433;
+  border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #2E3E56;
 }
+

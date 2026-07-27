@@ -58,31 +58,31 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({ stocks, onSelect
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
       {/* Total Market Cap */}
       <div className="glass-panel-hover p-4">
-        <div className="flex items-center justify-between text-slate-400 mb-2">
-          <span className="text-xs font-semibold uppercase tracking-wider">Market Cap</span>
-          <DollarSign className="w-3.5 h-3.5 text-slate-400" />
+        <div className="flex items-center justify-between text-slate-400 mb-1.5">
+          <span className="text-[11px] font-semibold text-slate-400 tracking-wider uppercase">Aggregate Market Cap</span>
+          <span className="text-[10px] font-mono text-slate-500">USD</span>
         </div>
-        <div className="text-xl font-bold text-white font-mono tracking-tight">
+        <div className="text-xl font-bold text-white font-mono tracking-tight tabular-nums">
           {formatMarketCap(marketData.totalMarketCap)}
         </div>
-        <div className={`text-xs font-medium mt-1 ${isMarketUp ? 'text-emerald-400' : 'text-red-400'}`}>
-          {isMarketUp ? '+' : ''}{marketData.averageChange.toFixed(2)}% Avg
+        <div className={`text-xs font-semibold mt-1 font-mono tabular-nums ${isMarketUp ? 'text-emerald-400' : 'text-red-400'}`}>
+          {isMarketUp ? '+' : ''}{marketData.averageChange.toFixed(2)}% Avg Move
         </div>
       </div>
 
       {/* Market Breadth (Advancing / Declining) */}
       <div className="glass-panel-hover p-4">
-        <div className="flex items-center justify-between text-slate-400 mb-2">
-          <span className="text-xs font-semibold uppercase tracking-wider">Advancing / Declining</span>
-          <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+        <div className="flex items-center justify-between text-slate-400 mb-1.5">
+          <span className="text-[11px] font-semibold text-slate-400 tracking-wider uppercase">Market Breadth</span>
+          <span className="text-[10px] font-mono text-slate-500">A / D</span>
         </div>
-        <div className="text-xl font-bold text-white font-mono tracking-tight flex items-center gap-2">
+        <div className="text-xl font-bold text-white font-mono tracking-tight flex items-center gap-2 tabular-nums">
           <span className="text-emerald-400">{marketData.gainersCount}</span>
           <span className="text-slate-600 text-sm font-normal">/</span>
           <span className="text-red-400">{marketData.losersCount}</span>
         </div>
-        <div className="text-slate-400 text-xs font-medium mt-1">
-          {stocks.length > 0 ? ((marketData.gainersCount / stocks.length) * 100).toFixed(0) : 0}% Up today
+        <div className="text-slate-400 text-xs font-mono mt-1 tabular-nums">
+          {stocks.length > 0 ? ((marketData.gainersCount / stocks.length) * 100).toFixed(0) : 0}% Advancing
         </div>
       </div>
 
@@ -92,15 +92,15 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({ stocks, onSelect
           onClick={() => onSelectStock?.(marketData.topGainer!.symbol)}
           className="glass-panel-hover p-4 cursor-pointer"
         >
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Top Gainer</span>
-            <span className="px-1.5 py-0.5 rounded text-[11px] font-semibold pill-green">
+          <div className="flex items-center justify-between text-slate-400 mb-1.5">
+            <span className="text-[11px] font-semibold text-emerald-400 tracking-wider uppercase">Session Lead</span>
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold font-mono pill-green tabular-nums">
               +{marketData.topGainer.changePercent.toFixed(2)}%
             </span>
           </div>
           <div className="flex justify-between items-baseline">
-            <span className="text-lg font-bold text-white">{marketData.topGainer.symbol}</span>
-            <span className="text-sm font-bold text-white font-mono">${marketData.topGainer.price.toFixed(2)}</span>
+            <span className="text-lg font-bold text-white tracking-tight">{marketData.topGainer.symbol}</span>
+            <span className="text-sm font-bold text-white font-mono tabular-nums">${marketData.topGainer.price.toFixed(2)}</span>
           </div>
           <div className="text-slate-400 text-xs truncate mt-0.5">{marketData.topGainer.name}</div>
         </div>
@@ -108,21 +108,21 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({ stocks, onSelect
         <div className="glass-panel p-4" />
       )}
 
-      {/* Top Loser */}
+      {/* Top Decliner */}
       {marketData.topLoser ? (
         <div
           onClick={() => onSelectStock?.(marketData.topLoser!.symbol)}
           className="glass-panel-hover p-4 cursor-pointer"
         >
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-semibold text-red-400 uppercase tracking-wider">Top Loser</span>
-            <span className="px-1.5 py-0.5 rounded text-[11px] font-semibold pill-red">
+          <div className="flex items-center justify-between text-slate-400 mb-1.5">
+            <span className="text-[11px] font-semibold text-red-400 tracking-wider uppercase">Session Lag</span>
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold font-mono pill-red tabular-nums">
               {marketData.topLoser.changePercent.toFixed(2)}%
             </span>
           </div>
           <div className="flex justify-between items-baseline">
-            <span className="text-lg font-bold text-white">{marketData.topLoser.symbol}</span>
-            <span className="text-sm font-bold text-white font-mono">${marketData.topLoser.price.toFixed(2)}</span>
+            <span className="text-lg font-bold text-white tracking-tight">{marketData.topLoser.symbol}</span>
+            <span className="text-sm font-bold text-white font-mono tabular-nums">${marketData.topLoser.price.toFixed(2)}</span>
           </div>
           <div className="text-slate-400 text-xs truncate mt-0.5">{marketData.topLoser.name}</div>
         </div>

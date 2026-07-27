@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { X, TrendingUp, TrendingDown, BarChart3, Activity } from 'lucide-react';
+import { X, TrendingUp, BarChart3 } from 'lucide-react';
 import { StockData } from '../types/financial';
 import { PriceChart } from './PriceChart';
 import { rangePosition } from '../utils/range';
@@ -17,6 +17,14 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({
   onNavigateToChart,
   onNavigateToPredict,
 }) => {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   if (!stock) return null;
 
   const isPositive = stock.changePercent >= 0;
@@ -36,14 +44,6 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({
     if (mc >= 1e6) return `$${(mc / 1e6).toFixed(2)}M`;
     return `$${mc.toLocaleString()}`;
   };
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">

@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, Bitcoin, RefreshCw, Sparkles } from 'lucide-react';
+import {
+  BarChart3,
+  TrendingUp,
+  Bitcoin,
+  RefreshCw,
+} from 'lucide-react';
 import { StockCard } from './components/StockCard';
 import { CryptoCard } from './components/CryptoCard';
-import { PriceChart } from './components/PriceChart';
 import { MarketOverview } from './components/MarketOverview';
 import { SearchBar } from './components/SearchBar';
 import { FilterControls } from './components/FilterControls';
-import { ApiStatus } from './components/ApiStatus';
-import { DataSourceInfo } from './components/DataSourceInfo';
 import { PredictionPanel } from './components/PredictionPanel';
+import { StockDetailModal } from './components/StockDetailModal';
 import { financialApi } from './services/financialApi';
 import { StockData, CryptoData } from './types/financial';
 
@@ -16,15 +19,19 @@ function App() {
   const [stocks, setStocks] = useState<StockData[]>([]);
   const [crypto, setCrypto] = useState<CryptoData[]>([]);
   const [selectedStock, setSelectedStock] = useState<string>('AAPL');
-  const [activeTab, setActiveTab] = useState<'overview' | 'stocks' | 'crypto' | 'charts' | 'predict'>('overview');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'markets' | 'predict'>('dashboard');
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [apiError, setApiError] = useState<string>('');
-  
-  // Filter and sort states
+
+  // Market filter in Markets tab: 'all' | 'stocks' | 'crypto' | 'gainers' | 'losers'
+  const [assetFilter, setAssetFilter] = useState<'all' | 'stocks' | 'crypto' | 'gainers' | 'losers'>('all');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [modalStock, setModalStock] = useState<StockData | null>(null);
+
+  // Sort states
   const [sortBy, setSortBy] = useState<'symbol' | 'price' | 'change' | 'volume'>('change');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [filterBy, setFilterBy] = useState<'all' | 'gainers' | 'losers'>('all');
 
   const fetchData = async () => {
     setLoading(true);
@@ -47,282 +54,424 @@ function App() {
 
   useEffect(() => {
     fetchData();
-    
-    // Auto-refresh data every 30 seconds
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, []);
 
-  const handleSortChange = (newSortBy: typeof sortBy, newSortOrder: typeof sortOrder) => {
-    setSortBy(newSortBy);
-    setSortOrder(newSortOrder);
+  const handleSelectStockAndOpenModal = (symbol: string) => {
+    setSelectedStock(symbol);
+    const found = stocks.find((s) => s.symbol.toUpperCase() === symbol.toUpperCase());
+    if (found) {
+      setModalStock(found);
+    } else {
+      setModalStock({
+        symbol,
+        name: symbol,
+        price: 0,
+        change: 0,
+        changePercent: 0,
+        high: 0,
+        low: 0,
+        volume: 0,
+        source: 'synthetic',
+      });
+    }
   };
 
-  const getFilteredAndSortedStocks = () => {
-    let filtered = stocks;
-    
-    if (filterBy === 'gainers') {
-      filtered = stocks.filter(stock => stock.changePercent > 0);
-    } else if (filterBy === 'losers') {
-      filtered = stocks.filter(stock => stock.changePercent < 0);
+  const liveCount = stocks.filter((stock) => stock.source === 'live').length;
+
+  // Filtered Assets logic for Markets tab
+  const getFilteredAssets = () => {
+    let list: Array<StockData & { isCrypto?: boolean }> = stocks.map((s) => ({ ...s, isCrypto: false }));
+
+    if (assetFilter === 'stocks') {
+      list = stocks.map((s) => ({ ...s, isCrypto: false }));
+    } else if (assetFilter === 'crypto') {
+      list = crypto.map((c) => ({
+        symbol: c.symbol.toUpperCase(),
+        name: c.name,
+        price: c.current_price,
+        change: c.price_change_24h,
+        changePercent: c.price_change_percentage_24h,
+        high: c.high_24h,
+        low: c.low_24h,
+        volume: c.total_volume,
+        source: 'live',
+        isCrypto: true,
+      }));
+    } else if (assetFilter === 'gainers') {
+      list = stocks.filter((s) => s.changePercent > 0).map((s) => ({ ...s, isCrypto: false }));
+    } else if (assetFilter === 'losers') {
+      list = stocks.filter((s) => s.changePercent < 0).map((s) => ({ ...s, isCrypto: false }));
     }
 
-    return filtered.sort((a, b) => {
-      let aValue: number | string = a[sortBy];
-      let bValue: number | string = b[sortBy];
-      
+    return [...list].sort((a, b) => {
+      let aVal = a[sortBy];
+      let bVal = b[sortBy];
       if (sortBy === 'symbol') {
-        aValue = a.symbol;
-        bValue = b.symbol;
-        return sortOrder === 'asc' 
-          ? aValue.localeCompare(bValue as string)
-          : (bValue as string).localeCompare(aValue);
+        return sortOrder === 'asc' ? a.symbol.localeCompare(b.symbol) : b.symbol.localeCompare(a.symbol);
       }
-      
-      if (typeof aValue === 'number' && typeof bValue === 'number') {
-        return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
+      if (typeof aVal === 'number' && typeof bVal === 'number') {
+        return sortOrder === 'asc' ? aVal - bVal : bVal - aVal;
       }
-      
       return 0;
     });
   };
 
+  const filteredAssets = getFilteredAssets();
+
   const tabs = [
-    { id: 'overview', label: 'Market Overview', icon: BarChart3 },
-    { id: 'stocks', label: 'Stocks', icon: TrendingUp },
-    { id: 'crypto', label: 'Crypto', icon: Bitcoin },
-    { id: 'charts', label: 'Charts', icon: BarChart3 },
-    { id: 'predict', label: 'Predict', icon: Sparkles },
+    { id: 'dashboard', label: 'Dashboard' },
+    { id: 'markets', label: 'Markets' },
+    { id: 'predict', label: 'Forecasts' },
   ] as const;
 
-  const filteredStocks = getFilteredAndSortedStocks();
-  // Live-vs-demo comes from the backend's own source tags, not a guess.
-  const liveCount = stocks.filter((stock) => stock.source === 'live').length;
-
   return (
-    <div className="min-h-screen bg-gray-900">
-      {/* Header */}
-      <div className="bg-gray-800 border-b border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-600 rounded-lg">
-                <BarChart3 className="w-6 h-6 text-white" />
+    <div className="min-h-screen bg-[#0B0F17] text-slate-100 font-sans flex flex-col justify-between">
+      <div>
+        {/* Header Bar */}
+        <header className="bg-[#0B0F17] border-b border-slate-800 sticky top-0 z-40">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between h-14">
+              {/* Brand Logo & Tabs */}
+              <div className="flex items-center gap-6">
+                <div
+                  className="flex items-center gap-2 cursor-pointer"
+                  onClick={() => setActiveTab('dashboard')}
+                >
+                  <div className="w-7 h-7 rounded bg-blue-600 flex items-center justify-center text-white">
+                    <BarChart3 className="w-4 h-4" />
+                  </div>
+                  <span className="text-base font-bold text-white tracking-tight">StockLab</span>
+                </div>
+
+                <nav className="hidden md:flex items-center space-x-1">
+                  {tabs.map((tab) => {
+                    const isActive = activeTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id)}
+                        className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+                          isActive
+                            ? 'bg-slate-800 text-white'
+                            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    );
+                  })}
+                </nav>
               </div>
-              <h1 className="text-2xl font-bold text-white">StockLab</h1>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <div className="hidden md:block">
-                <SearchBar onSelectStock={setSelectedStock} />
+
+              {/* Header Search Bar */}
+              <div className="w-64 sm:w-80">
+                <SearchBar onSelectStock={handleSelectStockAndOpenModal} />
               </div>
-              
-              <DataSourceInfo />
-              
-              <button
-                onClick={fetchData}
-                disabled={loading}
-                className="p-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50"
-              >
-                <RefreshCw className={`w-5 h-5 text-gray-400 ${loading ? 'animate-spin' : ''}`} />
-              </button>
-              
-              <div className="hidden lg:block">
-                <ApiStatus liveCount={liveCount} total={stocks.length} lastUpdated={lastUpdated} error={apiError} />
+
+              {/* Header Status & Refresh */}
+              <div className="flex items-center gap-3">
+                <div className="hidden sm:flex items-center gap-2 text-xs text-slate-400 bg-slate-900 px-2.5 py-1 rounded-md border border-slate-800 font-mono">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  <span>{liveCount} Live</span>
+                  <span className="text-slate-600">•</span>
+                  <span className="text-slate-400">{lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+
+                <button
+                  onClick={fetchData}
+                  disabled={loading}
+                  className="p-1.5 text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-md transition-colors disabled:opacity-50"
+                  title="Refresh Market Data"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-blue-400' : ''}`} />
+                </button>
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Mobile Search */}
-      <div className="md:hidden p-4 bg-gray-800 border-b border-gray-700">
-        <SearchBar onSelectStock={setSelectedStock} />
-        <div className="mt-3">
-          <ApiStatus liveCount={liveCount} total={stocks.length} lastUpdated={lastUpdated} error={apiError} />
-        </div>
-      </div>
-
-      {/* Navigation Tabs */}
-      <div className="bg-gray-800 border-b border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-8">
+          {/* Mobile Tab Navigation */}
+          <div className="md:hidden flex border-t border-slate-800 bg-slate-900/60 px-4 py-1.5 overflow-x-auto space-x-2">
             {tabs.map((tab) => {
-              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-4 py-4 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === tab.id
-                      ? 'border-blue-500 text-blue-400'
-                      : 'border-transparent text-gray-400 hover:text-gray-300'
+                  className={`px-3 py-1 rounded text-xs font-semibold whitespace-nowrap ${
+                    isActive ? 'bg-blue-600 text-white' : 'text-slate-400'
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
                   {tab.label}
                 </button>
               );
             })}
           </div>
-        </div>
-      </div>
+        </header>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {activeTab === 'overview' && (
-          <div>
-            <MarketOverview stocks={stocks} />
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div>
-                <h2 className="text-2xl font-bold text-white mb-6">Top Stocks</h2>
-                <div className="grid grid-cols-1 gap-4">
-                  {stocks.slice(0, 3).map((stock) => (
-                    <StockCard key={stock.symbol} stock={stock} onClick={setSelectedStock} />
-                  ))}
+        {/* Main Content Workspace */}
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          {/* DASHBOARD TAB */}
+          {activeTab === 'dashboard' && (
+            <div className="space-y-6">
+              <MarketOverview stocks={stocks} onSelectStock={handleSelectStockAndOpenModal} />
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Equities Panel */}
+                <div>
+                  <div className="flex justify-between items-center mb-3">
+                    <h2 className="text-base font-bold text-white flex items-center gap-1.5">
+                      <TrendingUp className="w-4 h-4 text-emerald-400" /> Active Equities
+                    </h2>
+                    <button
+                      onClick={() => {
+                        setAssetFilter('stocks');
+                        setActiveTab('markets');
+                      }}
+                      className="text-xs text-blue-400 hover:underline font-medium"
+                    >
+                      View All ({stocks.length}) →
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3">
+                    {stocks.slice(0, 4).map((stock) => (
+                      <StockCard
+                        key={stock.symbol}
+                        stock={stock}
+                        onClick={handleSelectStockAndOpenModal}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Cryptocurrency Panel */}
+                <div>
+                  <div className="flex justify-between items-center mb-3">
+                    <h2 className="text-base font-bold text-white flex items-center gap-1.5">
+                      <Bitcoin className="w-4 h-4 text-amber-400" /> Cryptocurrency
+                    </h2>
+                    <button
+                      onClick={() => {
+                        setAssetFilter('crypto');
+                        setActiveTab('markets');
+                      }}
+                      className="text-xs text-blue-400 hover:underline font-medium"
+                    >
+                      View All ({crypto.length}) →
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3">
+                    {crypto.slice(0, 4).map((cryptoItem) => (
+                      <CryptoCard
+                        key={cryptoItem.id}
+                        crypto={cryptoItem}
+                        onClick={(sym) => handleSelectStockAndOpenModal(sym.toUpperCase())}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
-              <div>
-                <h2 className="text-2xl font-bold text-white mb-6">Top Crypto</h2>
-                <div className="grid grid-cols-1 gap-4">
-                  {crypto.slice(0, 3).map((cryptoItem) => (
-                    <CryptoCard key={cryptoItem.id} crypto={cryptoItem} />
-                  ))}
+            </div>
+          )}
+
+          {/* MARKETS TAB */}
+          {activeTab === 'markets' && (
+            <div className="space-y-4">
+              {/* Filter Controls Bar */}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800">
+                {/* Asset Category Filters */}
+                <div className="flex flex-wrap items-center gap-1">
+                  {[
+                    { id: 'all', label: 'All Markets' },
+                    { id: 'stocks', label: 'Stocks' },
+                    { id: 'crypto', label: 'Crypto' },
+                    { id: 'gainers', label: 'Gainers' },
+                    { id: 'losers', label: 'Losers' },
+                  ].map((f) => {
+                    const isActive = assetFilter === f.id;
+                    return (
+                      <button
+                        key={f.id}
+                        onClick={() => setAssetFilter(f.id as any)}
+                        className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${
+                          isActive ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                        }`}
+                      >
+                        {f.label}
+                      </button>
+                    );
+                  })}
                 </div>
-              </div>
-            </div>
-          </div>
-        )}
 
-        {activeTab === 'stocks' && (
-          <div>
-            <div className="flex justify-between items-center mb-8">
-              <h2 className="text-3xl font-bold text-white">Stock Market</h2>
-              <div className="text-sm text-gray-400">
-                {filteredStocks.length} of {stocks.length} stocks
-              </div>
-            </div>
-            
-            <FilterControls
-              sortBy={sortBy}
-              sortOrder={sortOrder}
-              onSortChange={handleSortChange}
-              filterBy={filterBy}
-              onFilterChange={setFilterBy}
-            />
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredStocks.map((stock) => (
-                <StockCard key={stock.symbol} stock={stock} onClick={setSelectedStock} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'crypto' && (
-          <div>
-            <div className="flex justify-between items-center mb-8">
-              <h2 className="text-3xl font-bold text-white">Cryptocurrency Market</h2>
-              <div className="text-sm text-gray-400">
-                {crypto.length} cryptocurrencies
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {crypto.map((cryptoItem) => (
-                <CryptoCard key={cryptoItem.id} crypto={cryptoItem} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'charts' && (
-          <div>
-            <div className="flex justify-between items-center mb-8">
-              <h2 className="text-3xl font-bold text-white">Price Charts</h2>
-              <div className="text-sm text-gray-400">
-                Viewing {selectedStock}
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 gap-8">
-              <PriceChart symbol={selectedStock} />
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {stocks.slice(0, 4).map((stock) => (
-                  <button
-                    key={stock.symbol}
-                    onClick={() => setSelectedStock(stock.symbol)}
-                    className={`p-4 rounded-xl border transition-all ${
-                      selectedStock === stock.symbol
-                        ? 'bg-blue-900/30 border-blue-500'
-                        : 'bg-gray-800 border-gray-700 hover:border-gray-600'
-                    }`}
+                {/* Sort & View Mode Controls */}
+                <div className="flex items-center gap-2 ml-auto">
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as any)}
+                    className="bg-slate-800 border border-slate-700 rounded px-2.5 py-1 text-white text-xs font-medium focus:outline-none"
                   >
-                    <div className="text-white font-semibold">{stock.symbol}</div>
-                    <div className="text-gray-400 text-sm">{stock.name}</div>
-                    <div className="text-white text-lg mt-2">${stock.price.toFixed(2)}</div>
-                    <div className={`text-sm ${stock.changePercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {stock.changePercent >= 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%
-                    </div>
-                  </button>
-                ))}
+                    <option value="change">% Change</option>
+                    <option value="price">Price</option>
+                    <option value="symbol">Symbol</option>
+                    <option value="volume">Volume</option>
+                  </select>
+
+                  <div className="flex bg-slate-800 p-0.5 rounded border border-slate-700">
+                    <button
+                      onClick={() => setViewMode('grid')}
+                      className={`px-2 py-0.5 text-xs rounded font-semibold ${
+                        viewMode === 'grid' ? 'bg-blue-600 text-white' : 'text-slate-400'
+                      }`}
+                    >
+                      Grid
+                    </button>
+                    <button
+                      onClick={() => setViewMode('table')}
+                      className={`px-2 py-0.5 text-xs rounded font-semibold ${
+                        viewMode === 'table' ? 'bg-blue-600 text-white' : 'text-slate-400'
+                      }`}
+                    >
+                      Table
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        )}
 
-        {activeTab === 'predict' && (
-          <div>
-            <div className="flex justify-between items-center mb-8">
-              <h2 className="text-3xl font-bold text-white">Price Prediction</h2>
-              <div className="text-sm text-gray-400">Viewing {selectedStock}</div>
-            </div>
+              {/* Grid View */}
+              {viewMode === 'grid' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredAssets.map((asset) =>
+                    asset.isCrypto ? (
+                      <CryptoCard
+                        key={asset.symbol}
+                        crypto={{
+                          id: asset.symbol.toLowerCase(),
+                          symbol: asset.symbol.toLowerCase(),
+                          name: asset.name,
+                          current_price: asset.price,
+                          price_change_24h: asset.change,
+                          price_change_percentage_24h: asset.changePercent,
+                          high_24h: asset.high,
+                          low_24h: asset.low,
+                          total_volume: asset.volume,
+                          market_cap: asset.volume * 100,
+                        }}
+                        onClick={(sym) => {
+                          handleSelectStockAndOpenModal(sym.toUpperCase());
+                        }}
+                      />
+                    ) : (
+                      <StockCard
+                        key={asset.symbol}
+                        stock={asset}
+                        onClick={handleSelectStockAndOpenModal}
+                      />
+                    )
+                  )}
+                </div>
+              )}
 
-            <div className="flex flex-wrap gap-2 mb-6">
-              {stocks.map((stock) => (
-                <button
-                  key={stock.symbol}
-                  onClick={() => setSelectedStock(stock.symbol)}
-                  className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                    selectedStock === stock.symbol
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-800 text-gray-400 border border-gray-700 hover:border-gray-600'
-                  }`}
-                >
-                  {stock.symbol}
-                </button>
-              ))}
+              {/* Table View */}
+              {viewMode === 'table' && (
+                <div className="glass-panel rounded-xl border border-slate-800 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs font-mono">
+                      <thead className="bg-slate-900 text-slate-400 border-b border-slate-800 uppercase tracking-wider text-[10px]">
+                        <tr>
+                          <th className="p-3">Symbol</th>
+                          <th className="p-3">Name</th>
+                          <th className="p-3 text-right">Price</th>
+                          <th className="p-3 text-right">24h Change</th>
+                          <th className="p-3 text-right">24h High / Low</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800">
+                        {filteredAssets.map((asset) => {
+                          const isPos = asset.change >= 0;
+                          return (
+                            <tr
+                              key={asset.symbol}
+                              onClick={() => handleSelectStockAndOpenModal(asset.symbol)}
+                              className="hover:bg-slate-800/60 cursor-pointer transition-colors"
+                            >
+                              <td className="p-3 font-bold text-white text-sm">{asset.symbol}</td>
+                              <td className="p-3 text-slate-300 font-sans">{asset.name}</td>
+                              <td className="p-3 text-right font-bold text-white text-sm">${asset.price.toFixed(2)}</td>
+                              <td className="p-3 text-right">
+                                <span className={`px-2 py-0.5 rounded text-xs font-semibold ${isPos ? 'pill-green' : 'pill-red'}`}>
+                                  {isPos ? '+' : ''}{asset.changePercent.toFixed(2)}%
+                                </span>
+                              </td>
+                              <td className="p-3 text-right text-slate-400">
+                                ${asset.low.toFixed(2)} – ${asset.high.toFixed(2)}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
+          )}
 
-            <PredictionPanel symbol={selectedStock} />
-          </div>
-        )}
+          {/* PREDICT TAB */}
+          {activeTab === 'predict' && (
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div>
+                  <h2 className="text-xl font-bold text-white">Price Forecast</h2>
+                  <p className="text-xs text-slate-400">Active Symbol: <span className="text-blue-400 font-bold font-mono">{selectedStock}</span></p>
+                </div>
 
-        {loading && (
-          <div className="flex items-center justify-center py-12">
-            <div className="flex items-center gap-3 text-gray-400">
-              <RefreshCw className="w-6 h-6 animate-spin" />
-              <span className="text-lg">Loading market data...</span>
+                <div className="flex flex-wrap gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
+                  {stocks.map((stock) => (
+                    <button
+                      key={stock.symbol}
+                      onClick={() => setSelectedStock(stock.symbol)}
+                      className={`px-2.5 py-1 rounded text-xs font-semibold transition-colors ${
+                        selectedStock === stock.symbol ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      {stock.symbol}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <PredictionPanel symbol={selectedStock} />
             </div>
-          </div>
-        )}
+          )}
+        </main>
       </div>
+
+      {/* Stock Detail Popover Modal */}
+      <StockDetailModal
+        stock={modalStock}
+        onClose={() => setModalStock(null)}
+        onNavigateToChart={(sym) => {
+          setSelectedStock(sym);
+        }}
+        onNavigateToPredict={(sym) => {
+          setSelectedStock(sym);
+          setActiveTab('predict');
+        }}
+      />
 
       {/* Footer */}
-      <footer className="bg-gray-800 border-t border-gray-700 mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center text-gray-400 space-y-2">
-            <p className="text-lg font-semibold text-white">StockLab — Live Markets & ML Price Predictions</p>
-            <p className="text-sm">
-              Real-time market data powered by Alpha Vantage, Finnhub, and CoinGecko APIs
-            </p>
-            <div className="flex justify-center items-center gap-4 text-xs">
-              <ApiStatus liveCount={liveCount} total={stocks.length} lastUpdated={lastUpdated} error={apiError} />
-            </div>
-            <p className="text-xs text-gray-500 pt-2">
-              * This dashboard is for educational purposes. Not financial advice.
-            </p>
+      <footer className="border-t border-slate-800 bg-[#0B0F17] py-4 mt-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-2 text-xs text-slate-500 font-mono">
+          <div>© {new Date().getFullYear()} StockLab Platform • Financial Proxy API</div>
+          <div className="flex items-center gap-3 text-slate-400 font-sans">
+            <span>Alpha Vantage</span>
+            <span>•</span>
+            <span>Finnhub</span>
+            <span>•</span>
+            <span>CoinGecko</span>
           </div>
         </div>
       </footer>

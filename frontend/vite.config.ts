@@ -12,6 +12,7 @@ export default defineConfig({
     exclude: ['lucide-react'],
   },
   server: {
+    port: Number(process.env.PORT) || 5173,
     proxy: {
       // Forward all API calls to the FastAPI backend during local dev so the
       // browser never talks to upstream providers and no keys are exposed.

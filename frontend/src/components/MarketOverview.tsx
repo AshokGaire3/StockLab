@@ -1,14 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, BarChart3 } from 'lucide-react';
 import { StockData } from '../types/financial';
-import { financialApi } from '../services/financialApi';
 
 interface MarketOverviewProps {
   stocks: StockData[];
+  onSelectStock?: (symbol: string) => void;
 }
 
-export const MarketOverview: React.FC<MarketOverviewProps> = ({ stocks }) => {
-  // Don't claim "Live" unless every tracked quote actually is.
+export const MarketOverview: React.FC<MarketOverviewProps> = ({ stocks, onSelectStock }) => {
   const liveCount = stocks.filter((stock) => stock.source === 'live').length;
   const allLive = stocks.length > 0 && liveCount === stocks.length;
 
@@ -24,17 +23,17 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({ stocks }) => {
   useEffect(() => {
     if (stocks.length === 0) return;
 
-    const gainers = stocks.filter(stock => stock.changePercent > 0);
-    const losers = stocks.filter(stock => stock.changePercent < 0);
+    const gainers = stocks.filter((stock) => stock.changePercent > 0);
+    const losers = stocks.filter((stock) => stock.changePercent < 0);
     const totalMarketCap = stocks.reduce((sum, stock) => sum + (stock.marketCap || 0), 0);
     const averageChange = stocks.reduce((sum, stock) => sum + stock.changePercent, 0) / stocks.length;
-    
-    const topGainer = stocks.reduce((prev, current) => 
-      (current.changePercent > prev.changePercent) ? current : prev
+
+    const topGainer = stocks.reduce((prev, current) =>
+      current.changePercent > prev.changePercent ? current : prev
     );
-    
-    const topLoser = stocks.reduce((prev, current) => 
-      (current.changePercent < prev.changePercent) ? current : prev
+
+    const topLoser = stocks.reduce((prev, current) =>
+      current.changePercent < prev.changePercent ? current : prev
     );
 
     setMarketData({
@@ -56,115 +55,79 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({ stocks }) => {
   const isMarketUp = marketData.averageChange > 0;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-        <div className="flex items-center justify-between mb-4">
-          <div className="p-2 bg-blue-900/30 rounded-lg">
-            <DollarSign className="w-6 h-6 text-blue-400" />
-          </div>
-          <div className={`text-sm ${isMarketUp ? 'text-green-400' : 'text-red-400'}`}>
-            {isMarketUp ? '+' : ''}{marketData.averageChange.toFixed(2)}%
-          </div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      {/* Total Market Cap */}
+      <div className="glass-panel-hover p-4">
+        <div className="flex items-center justify-between text-slate-400 mb-2">
+          <span className="text-xs font-semibold uppercase tracking-wider">Market Cap</span>
+          <DollarSign className="w-3.5 h-3.5 text-slate-400" />
         </div>
-        <div className="text-2xl font-bold text-white mb-1">
+        <div className="text-xl font-bold text-white font-mono tracking-tight">
           {formatMarketCap(marketData.totalMarketCap)}
         </div>
-        <div className="text-gray-400 text-sm">Total Market Cap</div>
+        <div className={`text-xs font-medium mt-1 ${isMarketUp ? 'text-emerald-400' : 'text-red-400'}`}>
+          {isMarketUp ? '+' : ''}{marketData.averageChange.toFixed(2)}% Avg
+        </div>
       </div>
 
-      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-        <div className="flex items-center justify-between mb-4">
-          <div className="p-2 bg-green-900/30 rounded-lg">
-            <TrendingUp className="w-6 h-6 text-green-400" />
-          </div>
-          <div className="text-sm text-green-400">
-            {((marketData.gainersCount / stocks.length) * 100).toFixed(0)}%
-          </div>
+      {/* Market Breadth (Advancing / Declining) */}
+      <div className="glass-panel-hover p-4">
+        <div className="flex items-center justify-between text-slate-400 mb-2">
+          <span className="text-xs font-semibold uppercase tracking-wider">Advancing / Declining</span>
+          <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
         </div>
-        <div className="text-2xl font-bold text-white mb-1">
-          {marketData.gainersCount}
+        <div className="text-xl font-bold text-white font-mono tracking-tight flex items-center gap-2">
+          <span className="text-emerald-400">{marketData.gainersCount}</span>
+          <span className="text-slate-600 text-sm font-normal">/</span>
+          <span className="text-red-400">{marketData.losersCount}</span>
         </div>
-        <div className="text-gray-400 text-sm">Gainers Today</div>
+        <div className="text-slate-400 text-xs font-medium mt-1">
+          {stocks.length > 0 ? ((marketData.gainersCount / stocks.length) * 100).toFixed(0) : 0}% Up today
+        </div>
       </div>
 
-      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-        <div className="flex items-center justify-between mb-4">
-          <div className="p-2 bg-red-900/30 rounded-lg">
-            <TrendingDown className="w-6 h-6 text-red-400" />
+      {/* Top Gainer */}
+      {marketData.topGainer ? (
+        <div
+          onClick={() => onSelectStock?.(marketData.topGainer!.symbol)}
+          className="glass-panel-hover p-4 cursor-pointer"
+        >
+          <div className="flex items-center justify-between text-slate-400 mb-2">
+            <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Top Gainer</span>
+            <span className="px-1.5 py-0.5 rounded text-[11px] font-semibold pill-green">
+              +{marketData.topGainer.changePercent.toFixed(2)}%
+            </span>
           </div>
-          <div className="text-sm text-red-400">
-            {((marketData.losersCount / stocks.length) * 100).toFixed(0)}%
+          <div className="flex justify-between items-baseline">
+            <span className="text-lg font-bold text-white">{marketData.topGainer.symbol}</span>
+            <span className="text-sm font-bold text-white font-mono">${marketData.topGainer.price.toFixed(2)}</span>
           </div>
+          <div className="text-slate-400 text-xs truncate mt-0.5">{marketData.topGainer.name}</div>
         </div>
-        <div className="text-2xl font-bold text-white mb-1">
-          {marketData.losersCount}
-        </div>
-        <div className="text-gray-400 text-sm">Losers Today</div>
-      </div>
-
-      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-        <div className="flex items-center justify-between mb-4">
-          <div className="p-2 bg-purple-900/30 rounded-lg">
-            <BarChart3 className="w-6 h-6 text-purple-400" />
-          </div>
-          <div className={`text-sm ${allLive ? 'text-green-400' : 'text-amber-400'}`}>
-            {allLive ? 'Live' : `${liveCount}/${stocks.length} live`}
-          </div>
-        </div>
-        <div className="text-2xl font-bold text-white mb-1">
-          {stocks.length}
-        </div>
-        <div className="text-gray-400 text-sm">Assets Tracked</div>
-      </div>
-
-      {marketData.topGainer && (
-        <div className="bg-gray-800 rounded-xl p-6 border border-green-700/50 md:col-span-2">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-green-900/30 rounded-lg">
-              <TrendingUp className="w-5 h-5 text-green-400" />
-            </div>
-            <span className="text-green-400 font-semibold">Top Gainer</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <div>
-              <div className="text-xl font-bold text-white">{marketData.topGainer.symbol}</div>
-              <div className="text-gray-400 text-sm">{marketData.topGainer.name}</div>
-            </div>
-            <div className="text-right">
-              <div className="text-xl font-bold text-white">
-                ${marketData.topGainer.price.toFixed(2)}
-              </div>
-              <div className="text-green-400 font-semibold">
-                +{marketData.topGainer.changePercent.toFixed(2)}%
-              </div>
-            </div>
-          </div>
-        </div>
+      ) : (
+        <div className="glass-panel p-4" />
       )}
 
-      {marketData.topLoser && (
-        <div className="bg-gray-800 rounded-xl p-6 border border-red-700/50 md:col-span-2">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-red-900/30 rounded-lg">
-              <TrendingDown className="w-5 h-5 text-red-400" />
-            </div>
-            <span className="text-red-400 font-semibold">Top Loser</span>
+      {/* Top Loser */}
+      {marketData.topLoser ? (
+        <div
+          onClick={() => onSelectStock?.(marketData.topLoser!.symbol)}
+          className="glass-panel-hover p-4 cursor-pointer"
+        >
+          <div className="flex items-center justify-between text-slate-400 mb-2">
+            <span className="text-xs font-semibold text-red-400 uppercase tracking-wider">Top Loser</span>
+            <span className="px-1.5 py-0.5 rounded text-[11px] font-semibold pill-red">
+              {marketData.topLoser.changePercent.toFixed(2)}%
+            </span>
           </div>
-          <div className="flex justify-between items-center">
-            <div>
-              <div className="text-xl font-bold text-white">{marketData.topLoser.symbol}</div>
-              <div className="text-gray-400 text-sm">{marketData.topLoser.name}</div>
-            </div>
-            <div className="text-right">
-              <div className="text-xl font-bold text-white">
-                ${marketData.topLoser.price.toFixed(2)}
-              </div>
-              <div className="text-red-400 font-semibold">
-                {marketData.topLoser.changePercent.toFixed(2)}%
-              </div>
-            </div>
+          <div className="flex justify-between items-baseline">
+            <span className="text-lg font-bold text-white">{marketData.topLoser.symbol}</span>
+            <span className="text-sm font-bold text-white font-mono">${marketData.topLoser.price.toFixed(2)}</span>
           </div>
+          <div className="text-slate-400 text-xs truncate mt-0.5">{marketData.topLoser.name}</div>
         </div>
+      ) : (
+        <div className="glass-panel p-4" />
       )}
     </div>
   );

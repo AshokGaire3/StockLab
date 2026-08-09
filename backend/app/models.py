@@ -6,6 +6,7 @@ multi-user can be layered on later without a migration headache.
 
 from datetime import datetime
 
+from sqlalchemy import BigInteger
 from sqlmodel import Field, SQLModel, UniqueConstraint
 
 
@@ -70,7 +71,10 @@ class PriceBar(SQLModel, table=True):
     high: float
     low: float
     close: float  # adjusted close
-    volume: int
+    # BigInteger: a 32-bit int overflows for stocks with a large cumulative
+    # split factor (e.g. NVDA's 4:1 + 10:1) once yfinance split-adjusts
+    # historical volume — a 2016 bar can exceed 2^31 shares post-adjustment.
+    volume: int = Field(sa_type=BigInteger)
     source: str  # provider the bar came from, e.g. "yfinance"
     fetched_at: datetime = Field(default_factory=datetime.utcnow)
 

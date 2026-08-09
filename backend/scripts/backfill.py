@@ -39,6 +39,11 @@ def main() -> int:
                 print(f"  {symbol:<6} FAILED: {exc}")
                 failures.append(symbol)
                 continue
+            except Exception as exc:  # noqa: BLE001 - one bad symbol must not sink the batch
+                session.rollback()
+                print(f"  {symbol:<6} FAILED: {exc!r}")
+                failures.append(symbol)
+                continue
             n, first, last = coverage(session, symbol, args.interval)
             print(f"  {symbol:<6} +{added:<5} stored={n:<6} {first} -> {last}")
 

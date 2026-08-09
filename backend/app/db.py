@@ -6,6 +6,7 @@ for v1.
 
 from collections.abc import Iterator
 
+from sqlalchemy import text
 from sqlmodel import Session, SQLModel, create_engine
 
 from app.config import get_settings
@@ -30,6 +31,15 @@ def init_db() -> None:
     import app.models  # noqa: F401
 
     SQLModel.metadata.create_all(engine)
+
+    # There's no migration tool here (create_all only adds missing tables/
+    # columns, it never alters an existing one) — pricebar.volume shipped as
+    # a 32-bit INTEGER and overflows for stocks with a large cumulative split
+    # factor once yfinance split-adjusts historical volume. Widening it is a
+    # no-op once already BIGINT, so it's safe to run on every startup.
+    if not _is_sqlite:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE pricebar ALTER COLUMN volume TYPE BIGINT"))
 
 
 def get_session() -> Iterator[Session]:
